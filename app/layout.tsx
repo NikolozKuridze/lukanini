@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nini x Luka | Love Game World",
-  description: "Funny interactive couple games with level-based surprises."
+  title: "ნინი და ლუკა | სიყვარულის სივრცე",
+  description: "მოძრავი სიყვარულის ფოტოები, მუსიკა და რომანტიკული ტექსტები."
 };
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ka">
       <body>{children}</body>
     </html>
   );

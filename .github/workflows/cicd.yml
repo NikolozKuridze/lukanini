@@ -83,6 +83,7 @@ jobs:
           ssh -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
             cd '$DEPLOY_PATH'
             echo 'NODE_ENV=production' | sudo tee .env >/dev/null
+            echo 'LOVE_SITE_PASSWORD=${{ secrets.LOVE_SITE_PASSWORD }}' | sudo tee -a .env >/dev/null
           "
 
       - name: Start service after deployment
