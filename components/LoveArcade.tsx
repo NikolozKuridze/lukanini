@@ -10,10 +10,13 @@ type FloatingImage = {
   y: number;
   width: number;
   height: number;
-  duration: number;
   delay: number;
   tilt: number;
   depth: number;
+  radiusX: number;
+  radiusY: number;
+  speed: number;
+  seed: number;
 };
 
 type HeartParticle = {
@@ -54,18 +57,22 @@ function makeFloat(src: string, idx: number, total: number): FloatingImage {
   const ring = 24 + (idx % 5) * 9;
   const x = 50 + Math.cos(angle * 1.3) * ring;
   const y = 44 + Math.sin(angle * 1.8) * (ring * 0.62);
+  const seed = (idx + 1) * 0.83;
 
   return {
     id: `${idx}-${Math.random().toString(16).slice(2)}`,
     src,
     x,
     y,
-    width: 130 + (idx % 4) * 20,
-    height: 170 + (idx % 5) * 22,
-    duration: 22 + (idx % 6) * 4,
+    width: 122 + (idx % 4) * 18,
+    height: 160 + (idx % 5) * 20,
     delay: (idx % 5) * 0.6,
     tilt: -12 + (idx % 9) * 3,
-    depth: 80 + (idx % 8) * 24
+    depth: 72 + (idx % 8) * 18,
+    radiusX: 10 + (idx % 6) * 3.5,
+    radiusY: 8 + (idx % 5) * 3.2,
+    speed: 0.24 + (idx % 7) * 0.05,
+    seed
   };
 }
 
@@ -96,6 +103,7 @@ export function LoveArcade() {
   const [loading, setLoading] = useState(true);
   const [imagesReady, setImagesReady] = useState(false);
   const [imagesFetched, setImagesFetched] = useState(false);
+  const [mediaStarted, setMediaStarted] = useState(false);
   const [youtubeReady, setYoutubeReady] = useState(false);
   const [tracks, setTracks] = useState<string[]>([]);
   const [audioSources, setAudioSources] = useState<{ a: string; b: string }>({ a: "", b: "" });
@@ -109,6 +117,9 @@ export function LoveArcade() {
   const currentTrackRef = useRef(0);
   const crossfadingRef = useRef(false);
   const rafCrossfadeRef = useRef<number | null>(null);
+  const orbitRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const pointerTargetRef = useRef({ x: 0, y: 0 });
+  const pointerSmoothRef = useRef({ x: 0, y: 0 });
 
   const visibleImages = useMemo(() => images.slice(0, MAX_FLOATING_IMAGES), [images]);
   const floating = useMemo(() => visibleImages.map((src, i) => makeFloat(src, i, visibleImages.length)), [visibleImages]);
@@ -216,6 +227,8 @@ export function LoveArcade() {
     // Autoplay starts muted to satisfy browser policies.
     playerCmd("playVideo");
     playerCmd("mute");
+    const t = setTimeout(() => setMediaStarted(true), 900);
+    return () => clearTimeout(t);
   }, [youtubeReady, hasLocalTracks]);
 
   useEffect(() => {
@@ -361,10 +374,94 @@ export function LoveArcade() {
   }, [images]);
 
   useEffect(() => {
-    if (!imagesFetched || !imagesReady) return;
+    if (!floating.length) return;
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+
+    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+    const updateTargetByPoint = (clientX: number, clientY: number) => {
+      const x = (clientX / window.innerWidth) * 2 - 1;
+      const y = (clientY / window.innerHeight) * 2 - 1;
+      pointerTargetRef.current.x = clamp(x, -1, 1);
+      pointerTargetRef.current.y = clamp(y, -1, 1);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      updateTargetByPoint(event.clientX, event.clientY);
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const t = event.touches[0];
+      if (!t) return;
+      updateTargetByPoint(t.clientX, t.clientY);
+    };
+
+    const onPointerLeave = () => {
+      pointerTargetRef.current.x = 0;
+      pointerTargetRef.current.y = 0;
+    };
+
+    const onOrientation = (event: DeviceOrientationEvent) => {
+      const gamma = event.gamma ?? 0;
+      const beta = event.beta ?? 0;
+      pointerTargetRef.current.x = clamp(gamma / 30, -1, 1);
+      pointerTargetRef.current.y = clamp(beta / 40, -1, 1);
+    };
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerleave", onPointerLeave, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("deviceorientation", onOrientation, { passive: true });
+
+    let raf = 0;
+    const start = performance.now();
+    const animate = (now: number) => {
+      const t = (now - start) / 1000;
+      const smooth = pointerSmoothRef.current;
+      const target = pointerTargetRef.current;
+
+      smooth.x += (target.x - smooth.x) * 0.075;
+      smooth.y += (target.y - smooth.y) * 0.075;
+
+      for (let i = 0; i < floating.length; i += 1) {
+        const el = orbitRefs.current[i];
+        const item = floating[i];
+        if (!el || !item) continue;
+
+        const phase = t * item.speed + item.delay + item.seed;
+        const wanderX = Math.sin(phase) * item.radiusX + Math.cos(phase * 0.67 + item.seed) * (item.radiusX * 0.4);
+        const wanderY = Math.cos(phase * 0.92) * item.radiusY + Math.sin(phase * 1.21 + item.seed) * (item.radiusY * 0.34);
+        const pointerX = smooth.x * (10 + item.depth * 0.08);
+        const pointerY = smooth.y * (8 + item.depth * 0.06);
+        const z = item.depth + Math.sin(phase * 0.85 + item.seed) * 20;
+        const rotation = item.tilt + Math.sin(phase * 1.15 + item.seed) * 5 + smooth.x * 7;
+        const scale = 1 + Math.sin(phase * 1.05 + item.seed) * 0.03;
+
+        el.style.transform = `translate3d(calc(-50% + ${wanderX + pointerX}px), calc(-50% + ${wanderY + pointerY}px), ${z}px) rotateZ(${rotation}deg) scale(${scale})`;
+      }
+
+      raf = window.requestAnimationFrame(animate);
+    };
+
+    raf = window.requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerleave", onPointerLeave);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("deviceorientation", onOrientation);
+      window.cancelAnimationFrame(raf);
+      orbitRefs.current = [];
+    };
+  }, [floating]);
+
+  useEffect(() => {
+    if (!imagesFetched || !imagesReady || !mediaStarted) return;
     const t = setTimeout(() => setLoading(false), 700);
     return () => clearTimeout(t);
-  }, [imagesFetched, imagesReady]);
+  }, [imagesFetched, imagesReady, mediaStarted]);
 
   function renderAnimatedLetters(text: string) {
     return text.split("").map((ch, i) => (
@@ -394,8 +491,8 @@ export function LoveArcade() {
 
       {hasLocalTracks ? (
         <>
-          <audio ref={audioARef} src={audioSources.a} playsInline preload="auto" className="hidden" />
-          <audio ref={audioBRef} src={audioSources.b} playsInline preload="auto" className="hidden" />
+          <audio ref={audioARef} src={audioSources.a} playsInline preload="auto" onPlaying={() => setMediaStarted(true)} className="hidden" />
+          <audio ref={audioBRef} src={audioSources.b} playsInline preload="auto" onPlaying={() => setMediaStarted(true)} className="hidden" />
         </>
       ) : null}
 
@@ -439,24 +536,20 @@ export function LoveArcade() {
 
         <div className="photo-space">
           {floating.map((img, idx) => {
-            const orbitClass = idx % 4 === 0 ? "orbit-a" : idx % 4 === 1 ? "orbit-b" : idx % 4 === 2 ? "orbit-c" : "orbit-d";
             const cardClass = idx % 3 === 0 ? "card-float-a" : idx % 3 === 1 ? "card-float-b" : "card-float-c";
-            const wobble = ((idx % 9) - 4) * 0.6;
 
             return (
               <div
                 key={img.id}
-                className={`photo-orbit ${orbitClass}`}
+                ref={(el) => {
+                  orbitRefs.current[idx] = el;
+                }}
+                className="photo-orbit"
                 style={{
                   left: `${img.x}%`,
                   top: `${img.y}%`,
                   width: `${img.width}px`,
                   height: `${img.height}px`,
-                  ["--dur" as string]: `${img.duration}s`,
-                  ["--delay" as string]: `${img.delay}s`,
-                  ["--tilt" as string]: img.tilt,
-                  ["--depth" as string]: img.depth,
-                  ["--wobble" as string]: wobble,
                   zIndex: 20 + idx
                 }}
               >
@@ -517,7 +610,7 @@ export function LoveArcade() {
       {loading ? (
         <div className="loading-romance">
           <div className="loading-heart" />
-          <p className="loading-text">დაიელოდე პატარავ...</p>
+          <p className="loading-text">დაელოდე პატარავ</p>
         </div>
       ) : null}
     </main>
