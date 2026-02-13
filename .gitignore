@@ -1,0 +1,13 @@
+node_modules
+**/node_modules/
+.next
+**/.next/
+out
+build
+dist
+coverage
+*.log
+.DS_Store
+*.tsbuildinfo
+
+certificates

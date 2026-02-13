@@ -1,0 +1,100 @@
+name: Deploy Lukanini
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      SERVICE_NAME: "lukanini"
+      DEPLOY_PATH: "/www/wwwroot/lukanini"
+      SUPERVISOR_SERVICE: "lukanini:*"
+      NODE_VERSION: "20.x"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Prepare deployment package
+        run: |
+          mkdir -p ./deploy
+          cp -r .next ./deploy/
+          cp -r public ./deploy/
+          cp package.json ./deploy/
+          cp package-lock.json ./deploy/ 2>/dev/null || true
+          cp pnpm-lock.yaml ./deploy/ 2>/dev/null || true
+          cp next.config.* ./deploy/ 2>/dev/null || true
+          cp -r app ./deploy/
+          cp -r components ./deploy/
+          cp -r lib ./deploy/
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Stop service before deployment
+        run: |
+          ssh -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+            sudo /www/server/panel/pyenv/bin/supervisorctl stop '$SUPERVISOR_SERVICE' || true
+            sleep 2
+          "
+
+      - name: Deploy application to server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -p ${{ secrets.SERVER_PORT }}" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='*.log' \
+            --exclude='.user.ini' \
+            --exclude='.htaccess' \
+            ./deploy/ "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:$DEPLOY_PATH/"
+
+      - name: Install production dependencies on server
+        run: |
+          ssh -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+            cd '$DEPLOY_PATH'
+            if [ -f package-lock.json ]; then
+              npm ci --omit=dev
+            else
+              npm i --omit=dev
+            fi
+          "
+
+      - name: Set production environment
+        run: |
+          ssh -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+            cd '$DEPLOY_PATH'
+            echo 'NODE_ENV=production' | sudo tee .env >/dev/null
+          "
+
+      - name: Start service after deployment
+        run: |
+          ssh -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+            sudo /www/server/panel/pyenv/bin/supervisorctl start '$SUPERVISOR_SERVICE' || sudo /www/server/panel/pyenv/bin/supervisorctl restart '$SUPERVISOR_SERVICE'
+            sleep 3
+            sudo /www/server/panel/pyenv/bin/supervisorctl status '$SUPERVISOR_SERVICE'
+          "
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf ~/.ssh ./deploy

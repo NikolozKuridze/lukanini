@@ -1,0 +1,480 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Poppins:wght@600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-1: #071a3d;
+  --bg-2: #123b7a;
+  --bg-3: #7a1027;
+  --premium-blue: #1e4fae;
+  --premium-red: #b8123a;
+  --deep-night: #030d21;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Nunito", ui-sans-serif, system-ui;
+  color: #fff;
+  background:
+    radial-gradient(1200px 500px at 0% 0%, rgba(255, 179, 193, 0.25), transparent 70%),
+    radial-gradient(900px 700px at 100% 10%, rgba(255, 225, 170, 0.18), transparent 70%),
+    linear-gradient(155deg, var(--bg-1), var(--bg-2) 48%, var(--bg-3));
+}
+
+.soft-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(12px);
+}
+
+.love-ocean {
+  background:
+    radial-gradient(1200px 700px at 15% 10%, rgba(39, 103, 215, 0.35), transparent 60%),
+    radial-gradient(1000px 680px at 82% 14%, rgba(192, 24, 67, 0.26), transparent 58%),
+    radial-gradient(1200px 900px at 50% 110%, rgba(8, 30, 74, 0.9), transparent 64%),
+    linear-gradient(170deg, #061331 0%, #0c2f68 38%, #4e1431 72%, #150919 100%);
+}
+
+.nebula-layer {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.16), transparent 32%),
+    radial-gradient(circle at 73% 31%, rgba(255, 132, 166, 0.19), transparent 38%),
+    radial-gradient(circle at 42% 84%, rgba(82, 162, 255, 0.2), transparent 35%);
+  filter: blur(0.2px);
+  animation: nebulaPulse 9s ease-in-out infinite;
+}
+
+.wave-layer {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: -5%;
+  border-radius: 50% 50% 0 0;
+  transform-origin: center;
+}
+
+.wave-back {
+  height: 32%;
+  background: linear-gradient(180deg, rgba(30, 79, 174, 0.22), rgba(30, 79, 174, 0.5));
+  animation: waveShift 14s ease-in-out infinite;
+}
+
+.wave-mid {
+  height: 26%;
+  bottom: -3%;
+  background: linear-gradient(180deg, rgba(184, 18, 58, 0.18), rgba(20, 54, 117, 0.52));
+  animation: waveShift 11s ease-in-out infinite reverse;
+}
+
+.wave-front {
+  height: 22%;
+  bottom: -1%;
+  background: linear-gradient(180deg, rgba(9, 35, 84, 0.05), rgba(6, 19, 49, 0.78));
+  animation: waveShift 8s ease-in-out infinite;
+}
+
+.photo-space {
+  position: absolute;
+  inset: 0;
+  perspective: 1400px;
+  transform-style: preserve-3d;
+  z-index: 6;
+}
+
+.photo-orbit {
+  position: absolute;
+  transform-style: preserve-3d;
+  animation: cardOrbit 18s ease-in-out infinite;
+}
+
+.photo-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.34),
+    0 0 22px rgba(84, 152, 255, 0.34),
+    0 0 18px rgba(255, 58, 107, 0.22);
+  transform-style: preserve-3d;
+  background: rgba(255, 255, 255, 0.09);
+  transition:
+    transform 140ms linear,
+    filter 220ms ease,
+    box-shadow 260ms ease;
+  will-change: transform, filter;
+  animation: cardGlow 5.2s ease-in-out infinite;
+}
+
+.photo-card-image {
+  object-fit: contain;
+  object-position: center top;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.24), transparent 34%),
+    linear-gradient(160deg, rgba(30, 79, 174, 0.2), rgba(184, 18, 58, 0.22));
+}
+
+
+.love-tree {
+  position: absolute;
+  left: 50%;
+  bottom: 16%;
+  width: min(360px, 66vw);
+  height: min(300px, 42vh);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.35));
+  z-index: 3;
+}
+
+.tree-trunk {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: clamp(24px, 3.2vw, 34px);
+  height: 44%;
+  transform: translateX(-50%);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #5a3218 0%, #2d160c 100%);
+}
+
+.tree-crown {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 100%;
+  height: 72%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 77, 123, 0.56), transparent 55%),
+    radial-gradient(circle at 65% 35%, rgba(64, 126, 239, 0.52), transparent 56%),
+    radial-gradient(circle at 50% 70%, rgba(190, 20, 61, 0.48), transparent 60%);
+  animation: crownPulse 7s ease-in-out infinite;
+}
+
+.tree-heart {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg);
+  background: linear-gradient(135deg, #ff658f, #c1133e);
+  border-radius: 2px;
+  animation: treeSpark 4.6s ease-in-out infinite;
+}
+
+.tree-heart::before,
+.tree-heart::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: inherit;
+}
+
+.tree-heart::before {
+  left: -7px;
+}
+
+.tree-heart::after {
+  top: -7px;
+}
+
+.ocean-heart {
+  position: absolute;
+  transform: rotate(45deg);
+  background: linear-gradient(135deg, #ff6b92, #d20f46);
+  border-radius: 2px;
+  opacity: 0.68;
+  animation-name: heartRise;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.ocean-heart::before,
+.ocean-heart::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: inherit;
+}
+
+.ocean-heart::before {
+  left: -50%;
+}
+
+.ocean-heart::after {
+  top: -50%;
+}
+
+.girl-phrase {
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: linear-gradient(135deg, rgba(184, 18, 58, 0.82), rgba(30, 79, 174, 0.78));
+  backdrop-filter: blur(6px);
+}
+
+.girl-phrase-float {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 10px;
+  border-radius: 12px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.girl-phrase-main {
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.romantic-line-track {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  width: min(92vw, 980px);
+  z-index: 30;
+}
+
+.romantic-line-main {
+  text-align: center;
+  font-size: clamp(14px, 2.2vw, 24px);
+  line-height: 1.4;
+  padding: 12px 16px;
+}
+
+.center-heart-wrap {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  z-index: 34;
+  pointer-events: none;
+}
+
+.center-heart-svg {
+  width: clamp(160px, 21vw, 280px);
+  height: clamp(160px, 21vw, 280px);
+  overflow: visible;
+  filter:
+    drop-shadow(0 0 16px rgba(255, 95, 137, 0.88))
+    drop-shadow(0 0 32px rgba(60, 135, 255, 0.72))
+    drop-shadow(0 0 58px rgba(255, 80, 126, 0.84));
+  animation: heartShine 2.2s ease-in-out infinite;
+}
+
+.center-heart-photo {
+  opacity: 0.96;
+  filter: saturate(1.15) contrast(1.06);
+}
+
+.center-heart-outline {
+  fill: transparent;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.phrase-letter {
+  display: inline-block;
+  animation: letterDance 2.2s ease-in-out infinite;
+  will-change: transform, opacity, text-shadow;
+}
+
+@keyframes cardOrbit {
+  0% {
+    transform: translate(-50%, -50%) rotateZ(calc(var(--tilt) * 1deg - 5deg)) translateZ(calc(var(--depth) * 1px));
+  }
+  25% {
+    transform: translate(-49%, -52%) rotateZ(calc(var(--tilt) * 1deg + 5deg)) translateZ(calc(var(--depth) * 1px + 28px));
+  }
+  50% {
+    transform: translate(-51%, -49%) rotateZ(calc(var(--tilt) * 1deg - 3deg)) translateZ(calc(var(--depth) * 1px + 12px));
+  }
+  75% {
+    transform: translate(-49%, -51%) rotateZ(calc(var(--tilt) * 1deg + 6deg)) translateZ(calc(var(--depth) * 1px + 34px));
+  }
+  100% {
+    transform: translate(-50%, -50%) rotateZ(calc(var(--tilt) * 1deg - 5deg)) translateZ(calc(var(--depth) * 1px));
+  }
+}
+
+@keyframes cardGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 14px 28px rgba(0, 0, 0, 0.26),
+      0 0 18px rgba(84, 152, 255, 0.24),
+      0 0 14px rgba(255, 58, 107, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 20px 40px rgba(0, 0, 0, 0.34),
+      0 0 26px rgba(84, 152, 255, 0.38),
+      0 0 22px rgba(255, 58, 107, 0.28);
+  }
+}
+
+@keyframes waveShift {
+  0% {
+    transform: translateX(-2%) scaleY(1);
+  }
+  50% {
+    transform: translateX(2%) scaleY(1.08);
+  }
+  100% {
+    transform: translateX(-2%) scaleY(1);
+  }
+}
+
+@keyframes heartRise {
+  0% {
+    transform: translateY(0) rotate(45deg) scale(0.84);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.78;
+  }
+  100% {
+    transform: translateY(-130px) rotate(45deg) scale(1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes crownPulse {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.04);
+  }
+}
+
+@keyframes treeSpark {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: rotate(45deg) scale(0.84);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1.08);
+  }
+}
+
+@keyframes nebulaPulse {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes letterDance {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.88;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.06);
+    opacity: 1;
+    text-shadow: 0 2px 12px rgba(255, 255, 255, 0.35);
+  }
+}
+
+@keyframes heartShine {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .photo-space {
+    transform: scale(0.7);
+    transform-origin: center 46%;
+  }
+
+  .photo-card {
+    border-radius: 18px;
+  }
+
+  .love-tree {
+    bottom: 14%;
+    width: min(320px, 82vw);
+    height: min(260px, 36vh);
+  }
+
+  .girl-phrase-float {
+    font-size: 11px;
+    padding: 5px 7px;
+  }
+
+  .girl-phrase-main {
+    font-size: 13px;
+  }
+
+  .romantic-line-track {
+    bottom: 9%;
+    width: 94vw;
+  }
+
+  .center-heart-wrap {
+    top: 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-back,
+  .wave-mid,
+  .wave-front,
+  .nebula-layer,
+  .tree-crown,
+  .tree-heart,
+  .ocean-heart,
+  .photo-card,
+  .center-heart-svg,
+  .phrase-letter {
+    animation: none !important;
+  }
+}
