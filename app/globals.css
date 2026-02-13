@@ -104,7 +104,32 @@ body {
 .photo-orbit {
   position: absolute;
   transform-style: preserve-3d;
-  animation: cardOrbit 18s ease-in-out infinite;
+  animation: cardOrbit var(--dur, 22s) ease-in-out var(--delay, 0s) infinite;
+  will-change: transform;
+}
+
+.orbit-a {
+  animation:
+    cardOrbit var(--dur, 22s) ease-in-out var(--delay, 0s) infinite,
+    orbitA 13s ease-in-out calc(var(--delay, 0s) * 0.5) infinite;
+}
+
+.orbit-b {
+  animation:
+    cardOrbit var(--dur, 24s) ease-in-out var(--delay, 0s) infinite reverse,
+    orbitB 11s ease-in-out calc(var(--delay, 0s) * 0.6) infinite;
+}
+
+.orbit-c {
+  animation:
+    cardOrbit var(--dur, 20s) ease-in-out var(--delay, 0s) infinite,
+    orbitC 15s ease-in-out calc(var(--delay, 0s) * 0.4) infinite;
+}
+
+.orbit-d {
+  animation:
+    cardOrbit var(--dur, 26s) ease-in-out var(--delay, 0s) infinite reverse,
+    orbitD 9s ease-in-out calc(var(--delay, 0s) * 0.3) infinite;
 }
 
 .photo-card {
@@ -126,6 +151,24 @@ body {
     box-shadow 260ms ease;
   will-change: transform, filter;
   animation: cardGlow 5.2s ease-in-out infinite;
+}
+
+.card-float-a {
+  animation:
+    cardGlow 5.2s ease-in-out infinite,
+    cardFloatA 7.4s ease-in-out infinite;
+}
+
+.card-float-b {
+  animation:
+    cardGlow 5.6s ease-in-out infinite,
+    cardFloatB 6.6s ease-in-out infinite;
+}
+
+.card-float-c {
+  animation:
+    cardGlow 4.8s ease-in-out infinite,
+    cardFloatC 8.2s ease-in-out infinite;
 }
 
 .photo-card-image {
@@ -401,6 +444,97 @@ body {
   }
 }
 
+@keyframes orbitA {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  25% {
+    transform: translate(-45%, -53%);
+  }
+  50% {
+    transform: translate(-50%, -46%);
+  }
+  75% {
+    transform: translate(-54%, -51%);
+  }
+}
+
+@keyframes orbitB {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  20% {
+    transform: translate(-57%, -48%);
+  }
+  50% {
+    transform: translate(-47%, -55%);
+  }
+  80% {
+    transform: translate(-52%, -45%);
+  }
+}
+
+@keyframes orbitC {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  30% {
+    transform: translate(-44%, -47%);
+  }
+  60% {
+    transform: translate(-55%, -54%);
+  }
+}
+
+@keyframes orbitD {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  33% {
+    transform: translate(-58%, -56%);
+  }
+  66% {
+    transform: translate(-43%, -44%);
+  }
+}
+
+@keyframes cardFloatA {
+  0%,
+  100% {
+    transform: translateY(0) rotateZ(0deg);
+  }
+  50% {
+    transform: translateY(-14px) rotateZ(calc(var(--wobble, 0) * 1deg));
+  }
+}
+
+@keyframes cardFloatB {
+  0%,
+  100% {
+    transform: translateY(0) rotateZ(0deg) scale(1);
+  }
+  50% {
+    transform: translateY(10px) rotateZ(calc(var(--wobble, 0) * -1deg)) scale(1.03);
+  }
+}
+
+@keyframes cardFloatC {
+  0%,
+  100% {
+    transform: translateY(0) rotateZ(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotateZ(calc(var(--wobble, 0) * 0.7deg));
+  }
+  75% {
+    transform: translateY(9px) rotateZ(calc(var(--wobble, 0) * -0.6deg));
+  }
+}
+
 @keyframes waveShift {
   0% {
     transform: translateX(-2%) scaleY(1);
@@ -499,8 +633,12 @@ body {
 
 @media (max-width: 768px) {
   .photo-space {
-    transform: scale(0.7);
+    transform: scale(0.96);
     transform-origin: center 46%;
+  }
+
+  .photo-orbit {
+    animation-duration: calc(var(--dur, 22s) * 0.72);
   }
 
   .photo-card {
