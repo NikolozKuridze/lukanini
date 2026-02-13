@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 const COOKIE_NAME = "love_auth";
+const AUTH_COOKIE_VERSION = process.env.AUTH_COOKIE_VERSION || "v1";
+const AUTH_COOKIE_VALUE = `granted:${AUTH_COOKIE_VERSION}`;
 
 export async function POST(req: Request) {
   try {
@@ -12,7 +14,7 @@ export async function POST(req: Request) {
     }
 
     const res = NextResponse.json({ ok: true });
-    res.cookies.set(COOKIE_NAME, "granted", {
+    res.cookies.set(COOKIE_NAME, AUTH_COOKIE_VALUE, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",

@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-lukanini-main
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -56,9 +60,18 @@ jobs:
             sleep 2
           "
 
+      - name: Hard clear old build cache on server
+        run: |
+          ssh -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+            cd '$DEPLOY_PATH' || exit 1
+            sudo rm -rf .next
+            sudo rm -rf node_modules/.cache 2>/dev/null || true
+            sudo find . -maxdepth 1 -name '.next-*' -type d -exec rm -rf {} + 2>/dev/null || true
+          "
+
       - name: Deploy application to server
         run: |
-          rsync -avz --delete \
+          rsync -avz --delete --checksum \
             -e "ssh -p ${{ secrets.SERVER_PORT }}" \
             --exclude='.git' \
             --exclude='.github' \
@@ -84,6 +97,15 @@ jobs:
             cd '$DEPLOY_PATH'
             echo 'NODE_ENV=production' | sudo tee .env >/dev/null
             echo 'LOVE_SITE_PASSWORD=${{ secrets.LOVE_SITE_PASSWORD }}' | sudo tee -a .env >/dev/null
+            echo 'AUTH_COOKIE_VERSION=${{ github.sha }}' | sudo tee -a .env >/dev/null
+            echo 'APP_RELEASE=${{ github.sha }}' | sudo tee -a .env >/dev/null
+          "
+
+      - name: Clear Nginx proxy cache
+        run: |
+          ssh -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "
+            sudo rm -rf /www/server/nginx/proxy_cache_dir/* 2>/dev/null || true
+            sudo /www/server/nginx/sbin/nginx -s reload || true
           "
 
       - name: Start service after deployment
