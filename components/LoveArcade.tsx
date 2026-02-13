@@ -95,7 +95,7 @@ export function LoveArcade() {
   const [centerIndex, setCenterIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [imagesReady, setImagesReady] = useState(false);
-  const [mediaReady, setMediaReady] = useState(false);
+  const [imagesFetched, setImagesFetched] = useState(false);
   const [youtubeReady, setYoutubeReady] = useState(false);
   const [tracks, setTracks] = useState<string[]>([]);
   const [audioSources, setAudioSources] = useState<{ a: string; b: string }>({ a: "", b: "" });
@@ -163,7 +163,11 @@ export function LoveArcade() {
     fetch("/api/images")
       .then((r) => r.json())
       .then((d: { images?: string[] }) => {
-        if (!d.images?.length) return;
+        if (!d.images?.length) {
+          setImages([]);
+          setImagesReady(true);
+          return;
+        }
         const prioritized = [...d.images].sort((a, b) => {
           const aName = a.toLowerCase();
           const bName = b.toLowerCase();
@@ -175,7 +179,11 @@ export function LoveArcade() {
         setImages(prioritized);
         setCenterIndex(0);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        setImages([]);
+        setImagesReady(true);
+      })
+      .finally(() => setImagesFetched(true));
   }, []);
 
   useEffect(() => {
@@ -211,11 +219,6 @@ export function LoveArcade() {
   }, [youtubeReady, hasLocalTracks]);
 
   useEffect(() => {
-    if (hasLocalTracks) return;
-    if (youtubeReady) setMediaReady(true);
-  }, [hasLocalTracks, youtubeReady]);
-
-  useEffect(() => {
     activeAudioRef.current = activeAudio;
   }, [activeAudio]);
 
@@ -231,7 +234,6 @@ export function LoveArcade() {
     const activeEl = activeAudioRef.current === "a" ? a : b;
     const p = activeEl.play();
     if (p && typeof p.catch === "function") p.catch(() => undefined);
-    setMediaReady(true);
   }, [hasLocalTracks, audioSources]);
 
   useEffect(() => {
@@ -337,15 +339,16 @@ export function LoveArcade() {
   }, [images]);
 
   useEffect(() => {
-    if (!visibleImages.length) return;
+    if (!images.length) return;
+    setImagesReady(false);
     let done = 0;
     let cancelled = false;
     const mark = () => {
       done += 1;
-      if (!cancelled && done >= visibleImages.length) setImagesReady(true);
+      if (!cancelled && done >= images.length) setImagesReady(true);
     };
 
-    visibleImages.forEach((src) => {
+    images.forEach((src) => {
       const img = new window.Image();
       img.onload = mark;
       img.onerror = mark;
@@ -355,13 +358,13 @@ export function LoveArcade() {
     return () => {
       cancelled = true;
     };
-  }, [visibleImages]);
+  }, [images]);
 
   useEffect(() => {
-    if (!imagesReady || !mediaReady) return;
+    if (!imagesFetched || !imagesReady) return;
     const t = setTimeout(() => setLoading(false), 700);
     return () => clearTimeout(t);
-  }, [imagesReady, mediaReady]);
+  }, [imagesFetched, imagesReady]);
 
   function renderAnimatedLetters(text: string) {
     return text.split("").map((ch, i) => (
@@ -396,7 +399,7 @@ export function LoveArcade() {
         </>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-0 z-0">
+      <div className={`pointer-events-none absolute inset-0 z-0 transition-opacity duration-500 ${loading ? "opacity-0" : "opacity-100"}`}>
         <div className="nebula-layer" />
         <div className="wave-layer wave-back" />
         <div className="wave-layer wave-mid" />
@@ -515,7 +518,6 @@ export function LoveArcade() {
         <div className="loading-romance">
           <div className="loading-heart" />
           <p className="loading-text">დაიელოდე პატარავ...</p>
-          <p className="loading-sub">გული ბრუნავს შენთვის, კიდევ ერთი წამი...</p>
         </div>
       ) : null}
     </main>
