@@ -33,7 +33,6 @@ type TreeHeart = {
 };
 
 const MUSIC_IDS = ["z4nhDtkzhRg", "v29hLQnr1fo", "hlh6hczDdKM"];
-const FALLBACK_IMAGES = ["/live/memory-1.svg", "/live/memory-2.svg", "/live/memory-3.svg"];
 const FIRST_IMAGE_BASENAME = "img_2398-1";
 const MAX_FLOATING_IMAGES = 22;
 
@@ -91,10 +90,12 @@ function makeTreeHearts(count: number): TreeHeart[] {
 }
 
 export function LoveArcade() {
-  const [images, setImages] = useState<string[]>(FALLBACK_IMAGES);
+  const [images, setImages] = useState<string[]>([]);
   const [lineIndex, setLineIndex] = useState(0);
   const [centerIndex, setCenterIndex] = useState(0);
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const [loading, setLoading] = useState(true);
+  const [imagesReady, setImagesReady] = useState(false);
+  const [mediaReady, setMediaReady] = useState(false);
   const [youtubeReady, setYoutubeReady] = useState(false);
   const [tracks, setTracks] = useState<string[]>([]);
   const [audioSources, setAudioSources] = useState<{ a: string; b: string }>({ a: "", b: "" });
@@ -189,12 +190,13 @@ export function LoveArcade() {
 
   useEffect(() => {
     if (!tracks.length) return;
-    currentTrackRef.current = 0;
-    queueRef.current = shuffleIndices(tracks.length, 0);
+    const initial = Math.floor(Math.random() * tracks.length);
+    currentTrackRef.current = initial;
+    queueRef.current = shuffleIndices(tracks.length, initial);
     const upcoming = nextTrackIndex();
     setAudioSources({
-      a: tracks[0],
-      b: tracks[upcoming] || tracks[0]
+      a: tracks[initial],
+      b: tracks[upcoming] || tracks[initial]
     });
     setActiveAudio("a");
     activeAudioRef.current = "a";
@@ -207,6 +209,11 @@ export function LoveArcade() {
     playerCmd("playVideo");
     playerCmd("mute");
   }, [youtubeReady, hasLocalTracks]);
+
+  useEffect(() => {
+    if (hasLocalTracks) return;
+    if (youtubeReady) setMediaReady(true);
+  }, [hasLocalTracks, youtubeReady]);
 
   useEffect(() => {
     activeAudioRef.current = activeAudio;
@@ -224,6 +231,7 @@ export function LoveArcade() {
     const activeEl = activeAudioRef.current === "a" ? a : b;
     const p = activeEl.play();
     if (p && typeof p.catch === "function") p.catch(() => undefined);
+    setMediaReady(true);
   }, [hasLocalTracks, audioSources]);
 
   useEffect(() => {
@@ -329,25 +337,31 @@ export function LoveArcade() {
   }, [images]);
 
   useEffect(() => {
-    let raf = 0;
-    const onMove = (e: PointerEvent) => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        const x = (e.clientX / window.innerWidth) * 2 - 1;
-        const y = (e.clientY / window.innerHeight) * 2 - 1;
-        setMouse({ x, y });
-      });
+    if (!visibleImages.length) return;
+    let done = 0;
+    let cancelled = false;
+    const mark = () => {
+      done += 1;
+      if (!cancelled && done >= visibleImages.length) setImagesReady(true);
     };
-    const onLeave = () => setMouse({ x: 0, y: 0 });
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerleave", onLeave);
+
+    visibleImages.forEach((src) => {
+      const img = new window.Image();
+      img.onload = mark;
+      img.onerror = mark;
+      img.src = src;
+    });
+
     return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerleave", onLeave);
-      if (raf) cancelAnimationFrame(raf);
+      cancelled = true;
     };
-  }, []);
+  }, [visibleImages]);
+
+  useEffect(() => {
+    if (!imagesReady || !mediaReady) return;
+    const t = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(t);
+  }, [imagesReady, mediaReady]);
 
   function renderAnimatedLetters(text: string) {
     return text.split("").map((ch, i) => (
@@ -422,18 +436,14 @@ export function LoveArcade() {
 
         <div className="photo-space">
           {floating.map((img, idx) => {
-            const layer = (idx % 7) + 1;
-            const driftX = mouse.x * (12 + layer * 6.5);
-            const driftY = mouse.y * (9 + layer * 4.2);
-            const spin = mouse.x * (2.4 + layer * 0.28);
-            const lift = -Math.abs(mouse.y) * (2 + layer * 0.7);
-            const scale = 1 + Math.abs(mouse.x) * 0.04 + Math.abs(mouse.y) * 0.04;
-            const light = 1 + Math.abs(mouse.x) * 0.12 + Math.abs(mouse.y) * 0.12;
+            const orbitClass = idx % 4 === 0 ? "orbit-a" : idx % 4 === 1 ? "orbit-b" : idx % 4 === 2 ? "orbit-c" : "orbit-d";
+            const cardClass = idx % 3 === 0 ? "card-float-a" : idx % 3 === 1 ? "card-float-b" : "card-float-c";
+            const wobble = ((idx % 9) - 4) * 0.6;
 
             return (
               <div
                 key={img.id}
-                className="photo-orbit"
+                className={`photo-orbit ${orbitClass}`}
                 style={{
                   left: `${img.x}%`,
                   top: `${img.y}%`,
@@ -443,15 +453,12 @@ export function LoveArcade() {
                   animationDelay: `${img.delay}s`,
                   ["--tilt" as string]: img.tilt,
                   ["--depth" as string]: img.depth,
+                  ["--wobble" as string]: wobble,
                   zIndex: 20 + idx
                 }}
               >
                 <div
-                  className="photo-card"
-                  style={{
-                    transform: `translate(${driftX}px, ${driftY + lift}px) rotateZ(${spin}deg) scale(${scale})`,
-                    filter: `brightness(${light}) saturate(${1 + light * 0.12})`
-                  }}
+                  className={`photo-card ${cardClass}`}
                 >
                 <Image
                   src={img.src}
@@ -471,36 +478,46 @@ export function LoveArcade() {
           })}
         </div>
 
-        <div className="center-heart-wrap">
-          <svg className="center-heart-svg" viewBox="0 0 100 100" aria-hidden>
-            <defs>
-              <clipPath id="center-heart-clip">
-                <path d="M50 18 C35 2 8 8 8 34 C8 57 26 73 50 92 C74 73 92 57 92 34 C92 8 65 2 50 18 Z" />
-              </clipPath>
-            </defs>
+        {images.length ? (
+          <div className="center-heart-wrap">
+            <svg className="center-heart-svg" viewBox="0 0 100 100" aria-hidden>
+              <defs>
+                <clipPath id="center-heart-clip">
+                  <path d="M50 18 C35 2 8 8 8 34 C8 57 26 73 50 92 C74 73 92 57 92 34 C92 8 65 2 50 18 Z" />
+                </clipPath>
+              </defs>
 
-            <image
-              href={images[centerIndex] || images[0] || FALLBACK_IMAGES[0]}
-              x="0"
-              y="0"
-              width="100"
-              height="100"
-              preserveAspectRatio="xMidYMin slice"
-              clipPath="url(#center-heart-clip)"
-              className="center-heart-photo"
-            />
+              <image
+                href={images[centerIndex] || images[0]}
+                x="0"
+                y="0"
+                width="100"
+                height="100"
+                preserveAspectRatio="xMidYMin slice"
+                clipPath="url(#center-heart-clip)"
+                className="center-heart-photo"
+              />
 
-            <path
-              d="M50 18 C35 2 8 8 8 34 C8 57 26 73 50 92 C74 73 92 57 92 34 C92 8 65 2 50 18 Z"
-              className="center-heart-outline"
-            />
-          </svg>
-        </div>
+              <path
+                d="M50 18 C35 2 8 8 8 34 C8 57 26 73 50 92 C74 73 92 57 92 34 C92 8 65 2 50 18 Z"
+                className="center-heart-outline"
+              />
+            </svg>
+          </div>
+        ) : null}
 
         <div className="romantic-line-track">
           <p className="girl-phrase girl-phrase-main romantic-line-main">{renderAnimatedLetters(ROMANTIC_LINES[lineIndex])}</p>
         </div>
       </div>
+
+      {loading ? (
+        <div className="loading-romance">
+          <div className="loading-heart" />
+          <p className="loading-text">დაიელოდე პატარავ...</p>
+          <p className="loading-sub">გული ბრუნავს შენთვის, კიდევ ერთი წამი...</p>
+        </div>
+      ) : null}
     </main>
   );
 }
