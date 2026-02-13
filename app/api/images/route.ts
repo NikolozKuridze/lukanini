@@ -3,7 +3,8 @@ import path from "path";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-export const revalidate = 3600;
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".avif"]);
 
@@ -33,7 +34,7 @@ export async function GET() {
       { images },
       {
         headers: {
-          "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400"
+          "Cache-Control": "no-store, no-cache, must-revalidate"
         }
       }
     );
@@ -43,7 +44,7 @@ export async function GET() {
       {
         status: 200,
         headers: {
-          "Cache-Control": "public, max-age=120, s-maxage=120"
+          "Cache-Control": "no-store, no-cache, must-revalidate"
         }
       }
     );

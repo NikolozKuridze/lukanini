@@ -21,6 +21,9 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -46,6 +49,9 @@ body {
 }
 
 .love-ocean {
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
   background:
     radial-gradient(1200px 700px at 15% 10%, rgba(39, 103, 215, 0.35), transparent 60%),
     radial-gradient(1000px 680px at 82% 14%, rgba(192, 24, 67, 0.26), transparent 58%),
@@ -104,7 +110,7 @@ body {
 .photo-orbit {
   position: absolute;
   transform-style: preserve-3d;
-  transform: translate3d(-50%, -50%, 0);
+  transform: translate3d(-50%, 0, 0);
   will-change: transform;
 }
 
@@ -143,6 +149,7 @@ body {
   background:
     radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.24), transparent 34%),
     linear-gradient(160deg, rgba(30, 79, 174, 0.2), rgba(184, 18, 58, 0.22));
+  filter: saturate(1.08) contrast(1.04);
 }
 
 
@@ -348,8 +355,8 @@ body {
 }
 
 .center-heart-svg {
-  width: clamp(160px, 21vw, 280px);
-  height: clamp(160px, 21vw, 280px);
+  width: clamp(176px, 23vw, 312px);
+  height: clamp(176px, 23vw, 312px);
   overflow: visible;
   filter:
     drop-shadow(0 0 16px rgba(255, 95, 137, 0.88))
@@ -508,7 +515,7 @@ body {
 @media (max-width: 768px) {
   .photo-space {
     transform: scale(0.96);
-    transform-origin: center 46%;
+    transform-origin: center 48%;
   }
 
   .photo-card {
@@ -531,12 +538,39 @@ body {
   }
 
   .romantic-line-track {
-    bottom: 9%;
+    bottom: calc(env(safe-area-inset-bottom) + 14px);
     width: 94vw;
   }
 
   .center-heart-wrap {
-    top: 50%;
+    top: 48%;
+  }
+}
+
+@media (max-width: 430px) {
+  .photo-space {
+    transform: scale(0.94);
+    transform-origin: center 50%;
+  }
+
+  .center-heart-wrap {
+    top: 47%;
+  }
+
+  .center-heart-svg {
+    width: clamp(166px, 56vw, 268px);
+    height: clamp(166px, 56vw, 268px);
+  }
+
+  .girl-phrase-float {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+
+  .romantic-line-main {
+    font-size: clamp(13px, 4vw, 16px);
+    line-height: 1.38;
+    padding: 10px 12px;
   }
 }
 

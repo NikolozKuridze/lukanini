@@ -7,15 +7,19 @@ type FloatingImage = {
   id: string;
   src: string;
   x: number;
-  y: number;
   width: number;
   height: number;
   delay: number;
   tilt: number;
   depth: number;
-  radiusX: number;
-  radiusY: number;
-  speed: number;
+  fallSpeed: number;
+  startOffset: number;
+  swayAmp: number;
+  swaySpeed: number;
+  driftAmp: number;
+  driftSpeed: number;
+  pulseAmp: number;
+  pulseSpeed: number;
   seed: number;
 };
 
@@ -35,9 +39,14 @@ type TreeHeart = {
   delay: number;
 };
 
-const MUSIC_IDS = ["z4nhDtkzhRg", "v29hLQnr1fo", "hlh6hczDdKM"];
+const REMOTE_TRACKS = [
+  "https://image2url.com/r2/default/audio/1771012148604-dee6232f-27d1-479b-819e-962e21f6fd66.mp3",
+  "https://image2url.com/r2/default/audio/1771012189470-60cce2f3-ae22-4a8b-910d-1ae603594523.mp3",
+  "https://image2url.com/r2/default/audio/1771012204545-27f39c32-d1d3-4dcb-bf2b-b89d9f8e5daf.mp3"
+];
 const FIRST_IMAGE_BASENAME = "img_2398-1";
-const MAX_FLOATING_IMAGES = 22;
+const MAX_FLOATING_IMAGES_DESKTOP = 30;
+const MAX_FLOATING_IMAGES_MOBILE = 18;
 
 const ROMANTIC_LINES = [
   "ჩემი პატარა სტიჩუნია, ჩემს გულში ყველაზე თბილად ცხოვრობ.",
@@ -52,26 +61,36 @@ const ROMANTIC_LINES = [
   "მალე გნახავ პატარა და ისევ გულით ჩაგეხუტები."
 ];
 
-function makeFloat(src: string, idx: number, total: number): FloatingImage {
-  const angle = (idx / Math.max(total, 1)) * Math.PI * 2;
-  const ring = 24 + (idx % 5) * 9;
-  const x = 50 + Math.cos(angle * 1.3) * ring;
-  const y = 44 + Math.sin(angle * 1.8) * (ring * 0.62);
+function makeFloat(src: string, idx: number, total: number, compact = false): FloatingImage {
+  const columns = compact ? 7 : 9;
+  const lane = idx % columns;
+  const row = Math.floor(idx / columns);
+  const rows = Math.max(1, Math.ceil(total / columns));
+  const laneWidth = 100 / columns;
+  const jitter = (((idx * 37) % 100) / 100 - 0.5) * laneWidth * 0.24;
+  const x = Math.max(4, Math.min(96, laneWidth * (lane + 0.5) + jitter));
   const seed = (idx + 1) * 0.83;
+
+  const sizeFactor = compact ? 0.8 : 1;
+  const motionFactor = compact ? 0.78 : 1;
 
   return {
     id: `${idx}-${Math.random().toString(16).slice(2)}`,
     src,
     x,
-    y,
-    width: 122 + (idx % 4) * 18,
-    height: 160 + (idx % 5) * 20,
+    width: (122 + (idx % 4) * 18) * sizeFactor,
+    height: (160 + (idx % 5) * 20) * sizeFactor,
     delay: (idx % 5) * 0.6,
-    tilt: -12 + (idx % 9) * 3,
+    tilt: -10 + (idx % 7) * 3.2,
     depth: 72 + (idx % 8) * 18,
-    radiusX: 10 + (idx % 6) * 3.5,
-    radiusY: 8 + (idx % 5) * 3.2,
-    speed: 0.24 + (idx % 7) * 0.05,
+    fallSpeed: 0.043 + (idx % 7) * 0.007,
+    startOffset: (row / rows + (idx % 5) * 0.055) % 1,
+    swayAmp: (6 + (idx % 5) * 2.2) * motionFactor,
+    swaySpeed: 0.62 + (idx % 6) * 0.16,
+    driftAmp: (4 + (idx % 4) * 1.6) * motionFactor,
+    driftSpeed: 0.26 + (idx % 5) * 0.085,
+    pulseAmp: (0.008 + (idx % 3) * 0.004) * (compact ? 0.85 : 1),
+    pulseSpeed: 1.08 + (idx % 5) * 0.17,
     seed
   };
 }
@@ -104,12 +123,11 @@ export function LoveArcade() {
   const [imagesReady, setImagesReady] = useState(false);
   const [imagesFetched, setImagesFetched] = useState(false);
   const [mediaStarted, setMediaStarted] = useState(false);
-  const [youtubeReady, setYoutubeReady] = useState(false);
-  const [tracks, setTracks] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+  const [tracks] = useState<string[]>(REMOTE_TRACKS);
   const [audioSources, setAudioSources] = useState<{ a: string; b: string }>({ a: "", b: "" });
   const [activeAudio, setActiveAudio] = useState<"a" | "b">("a");
 
-  const playerRef = useRef<HTMLIFrameElement | null>(null);
   const audioARef = useRef<HTMLAudioElement | null>(null);
   const audioBRef = useRef<HTMLAudioElement | null>(null);
   const activeAudioRef = useRef<"a" | "b">("a");
@@ -121,12 +139,13 @@ export function LoveArcade() {
   const pointerTargetRef = useRef({ x: 0, y: 0 });
   const pointerSmoothRef = useRef({ x: 0, y: 0 });
 
-  const visibleImages = useMemo(() => images.slice(0, MAX_FLOATING_IMAGES), [images]);
-  const floating = useMemo(() => visibleImages.map((src, i) => makeFloat(src, i, visibleImages.length)), [visibleImages]);
+  const maxFloating = isMobile ? MAX_FLOATING_IMAGES_MOBILE : MAX_FLOATING_IMAGES_DESKTOP;
+  const visibleImages = useMemo(() => images.slice(0, maxFloating), [images, maxFloating]);
+  const floating = useMemo(() => visibleImages.map((src, i) => makeFloat(src, i, visibleImages.length, isMobile)), [visibleImages, isMobile]);
   const hearts = useMemo(() => makeHearts(26), []);
   const treeHearts = useMemo(() => makeTreeHearts(18), []);
 
-  const hasLocalTracks = tracks.length > 0;
+  const hasTracks = tracks.length > 0;
 
   function shuffleIndices(size: number, exclude: number | null = null) {
     const arr = Array.from({ length: size }, (_, i) => i).filter((i) => i !== exclude);
@@ -148,30 +167,15 @@ export function LoveArcade() {
     return next ?? 0;
   }
 
-  function playerCmd(func: string, args: unknown[] = []) {
-    const win = playerRef.current?.contentWindow;
-    if (!win) return;
-    win.postMessage(JSON.stringify({ event: "command", func, args }), "https://www.youtube.com");
-  }
-
   function tryUnlockAudio() {
-    if (hasLocalTracks) {
-      const activeEl = activeAudioRef.current === "a" ? audioARef.current : audioBRef.current;
-      if (!activeEl) return;
-      const p = activeEl.play();
-      if (p && typeof p.catch === "function") p.catch(() => undefined);
-      return;
-    }
-
-    if (youtubeReady) {
-      playerCmd("playVideo");
-      playerCmd("unMute");
-      playerCmd("setVolume", [90]);
-    }
+    const activeEl = activeAudioRef.current === "a" ? audioARef.current : audioBRef.current;
+    if (!activeEl) return;
+    const p = activeEl.play();
+    if (p && typeof p.catch === "function") p.catch(() => undefined);
   }
 
   useEffect(() => {
-    fetch("/api/images")
+    fetch("/api/images", { cache: "no-store" })
       .then((r) => r.json())
       .then((d: { images?: string[] }) => {
         if (!d.images?.length) {
@@ -198,16 +202,6 @@ export function LoveArcade() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/music")
-      .then((r) => r.json())
-      .then((d: { tracks?: string[] }) => {
-        if (!d.tracks?.length) return;
-        setTracks(d.tracks);
-      })
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
     if (!tracks.length) return;
     const initial = Math.floor(Math.random() * tracks.length);
     currentTrackRef.current = initial;
@@ -223,20 +217,19 @@ export function LoveArcade() {
   }, [tracks]);
 
   useEffect(() => {
-    if (!youtubeReady || hasLocalTracks) return;
-    // Autoplay starts muted to satisfy browser policies.
-    playerCmd("playVideo");
-    playerCmd("mute");
-    const t = setTimeout(() => setMediaStarted(true), 900);
-    return () => clearTimeout(t);
-  }, [youtubeReady, hasLocalTracks]);
+    const media = window.matchMedia("(max-width: 768px)");
+    const apply = () => setIsMobile(media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
 
   useEffect(() => {
     activeAudioRef.current = activeAudio;
   }, [activeAudio]);
 
   useEffect(() => {
-    if (!hasLocalTracks || !audioSources.a) return;
+    if (!hasTracks || !audioSources.a) return;
     const a = audioARef.current;
     const b = audioBRef.current;
     if (!a || !b) return;
@@ -247,10 +240,10 @@ export function LoveArcade() {
     const activeEl = activeAudioRef.current === "a" ? a : b;
     const p = activeEl.play();
     if (p && typeof p.catch === "function") p.catch(() => undefined);
-  }, [hasLocalTracks, audioSources]);
+  }, [hasTracks, audioSources]);
 
   useEffect(() => {
-    if (!hasLocalTracks) return;
+    if (!hasTracks) return;
     const a = audioARef.current;
     const b = audioBRef.current;
     if (!a || !b) return;
@@ -324,7 +317,7 @@ export function LoveArcade() {
       if (rafCrossfadeRef.current) cancelAnimationFrame(rafCrossfadeRef.current);
       rafCrossfadeRef.current = null;
     };
-  }, [hasLocalTracks, tracks]);
+  }, [hasTracks, tracks]);
 
   useEffect(() => {
     const onUnlock = () => tryUnlockAudio();
@@ -334,7 +327,7 @@ export function LoveArcade() {
       window.removeEventListener("pointerdown", onUnlock);
       window.removeEventListener("keydown", onUnlock);
     };
-  }, [hasLocalTracks, youtubeReady, audioSources, activeAudio]);
+  }, [audioSources, activeAudio]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -419,6 +412,7 @@ export function LoveArcade() {
     const start = performance.now();
     const animate = (now: number) => {
       const t = (now - start) / 1000;
+      const vh = window.innerHeight;
       const smooth = pointerSmoothRef.current;
       const target = pointerTargetRef.current;
 
@@ -430,16 +424,20 @@ export function LoveArcade() {
         const item = floating[i];
         if (!el || !item) continue;
 
-        const phase = t * item.speed + item.delay + item.seed;
-        const wanderX = Math.sin(phase) * item.radiusX + Math.cos(phase * 0.67 + item.seed) * (item.radiusX * 0.4);
-        const wanderY = Math.cos(phase * 0.92) * item.radiusY + Math.sin(phase * 1.21 + item.seed) * (item.radiusY * 0.34);
-        const pointerX = smooth.x * (10 + item.depth * 0.08);
-        const pointerY = smooth.y * (8 + item.depth * 0.06);
-        const z = item.depth + Math.sin(phase * 0.85 + item.seed) * 20;
-        const rotation = item.tilt + Math.sin(phase * 1.15 + item.seed) * 5 + smooth.x * 7;
-        const scale = 1 + Math.sin(phase * 1.05 + item.seed) * 0.03;
+        const progress = (item.startOffset + t * item.fallSpeed + item.delay * 0.03) % 1;
+        const ySpan = vh + item.height * 2 + 260;
+        const y = progress * ySpan - item.height - 130;
+        const sway = Math.sin(t * item.swaySpeed + item.seed) * item.swayAmp;
+        const drift = Math.sin(t * item.driftSpeed + item.seed * 1.7) * item.driftAmp;
+        const pointerX = smooth.x * (5 + item.depth * 0.045);
+        const pointerY = smooth.y * (3 + item.depth * 0.028);
+        const z = item.depth + Math.sin(t * 0.9 + item.seed) * 14;
+        const rotation = item.tilt + Math.sin(t * 1.15 + item.seed) * 3 + smooth.x * 3.5;
+        const scaleBase = 0.94 + (item.depth / 220) * 0.12;
+        const pulse = 1 + Math.sin(t * item.pulseSpeed + item.seed) * item.pulseAmp;
+        const scale = scaleBase * pulse;
 
-        el.style.transform = `translate3d(calc(-50% + ${wanderX + pointerX}px), calc(-50% + ${wanderY + pointerY}px), ${z}px) rotateZ(${rotation}deg) scale(${scale})`;
+        el.style.transform = `translate3d(calc(-50% + ${sway + drift + pointerX}px), ${y + pointerY}px, ${z}px) rotateZ(${rotation}deg) scale(${scale})`;
       }
 
       raf = window.requestAnimationFrame(animate);
@@ -477,19 +475,8 @@ export function LoveArcade() {
   }
 
   return (
-    <main className="love-ocean relative min-h-screen overflow-hidden">
-      {!hasLocalTracks ? (
-        <iframe
-          ref={playerRef}
-          title="სიყვარულის მუსიკა"
-          className="hidden"
-          src={`https://www.youtube.com/embed/${MUSIC_IDS[0]}?autoplay=1&mute=1&loop=1&playlist=${MUSIC_IDS.join(",")}&controls=0&modestbranding=1&rel=0&enablejsapi=1`}
-          allow="autoplay; encrypted-media"
-          onLoad={() => setYoutubeReady(true)}
-        />
-      ) : null}
-
-      {hasLocalTracks ? (
+    <main className="love-ocean relative min-h-[100dvh] overflow-hidden">
+      {hasTracks ? (
         <>
           <audio ref={audioARef} src={audioSources.a} playsInline preload="auto" onPlaying={() => setMediaStarted(true)} className="hidden" />
           <audio ref={audioBRef} src={audioSources.b} playsInline preload="auto" onPlaying={() => setMediaStarted(true)} className="hidden" />
@@ -547,7 +534,7 @@ export function LoveArcade() {
                 className="photo-orbit"
                 style={{
                   left: `${img.x}%`,
-                  top: `${img.y}%`,
+                  top: "0%",
                   width: `${img.width}px`,
                   height: `${img.height}px`,
                   zIndex: 20 + idx
